@@ -32,7 +32,7 @@ whitespace
 ;
 
 comment
-    : SEMI .*
+    : ';' .*?
 ;
 
 atmosphere
@@ -50,12 +50,12 @@ identifier
 ;
 
 initial
-    : letter
+    : Letter
     | specialInitial
 ;
 
-letter
-    : ('a'..'z')
+Letter
+    : [a-z]
 ;
 
 specialInitial
@@ -77,12 +77,12 @@ specialInitial
 
 subsequent
     : initial
-    | digit
+    | Digit
     | specialSubsequent
 ;
 
-digit
-    : ('0'..'9')
+Digit
+    : [0-9]
 ;
 
 specialSubsequent
@@ -93,9 +93,9 @@ specialSubsequent
 ;
 
 peculiarIdentifier
-    : PLUS
-    | DASH
-    | ELLIPSES
+    : '+'
+    | '-'
+    | '...'
 ;
 
 syntacticKeyword
@@ -135,7 +135,7 @@ boolean
 ;
 
 character
-    : '#\\' anyCharacter
+    : '#\\' .
     | '#\\' characterName
 ;
 
@@ -149,172 +149,66 @@ string
 ;
 
 stringElement
-    : ~('\\"' | "\\\\" )
+    : ~('"' | '\\')
     | '\\"'
     | '\\\\'
 ;
 
 number
-    : num2
-    | num8
-    | num10
-    | num16
+    : numR[2]
+    | numR[8]
+    | numR[10]
+    | numR[16]
 ;
 
-num2
-    : prefix2 complex2
+numR[int d]
+    : prefixR[d] complexR[d]
 ;
 
-complex2
-    : real2
-    | real2 '@' real2
-    | real2 '+' ureal2 'i'
-    | real2 '-' ureal2 'i'
-    | real2 '+ 'i'
-    | real2 '-' 'i'
-    | '+' ureal2 'i'
-    | '-' ureal2 'i'
+complexR[int d]
+    : realR[d]
+    | realR[d] '@' realR[d]
+    | realR[d] '+' urealR[d] 'i'
+    | realR[d] '-' urealR[d] 'i'
+    | realR[d] '+' 'i'
+    | realR[d] '-' 'i'
+    | '+' urealR[d] 'i'
+    | '-' urealR[d] 'i'
     | '+' 'i'
     | '-' 'i'
 ;
 
-real2
-    : sign ureal2
+realR[int d]
+    : sign urealR[d]
 ;
 
-ureal2
-    : uinteger2
-    | uinteger2 '/' uinteger2
-    | decimal10
+urealR[int d]
+    : uintegerR[d]
+    | uintegerR[d] '/' uintegerR[d]
+    | decimalR[d]
 ;
 
-decimal10
-    : uinteger10 suffix
-    | '.' digit10+ '#'* suffix
-    | digit10+ '.' digit10* '#'* suffix
-    | digit10+ '#'+ '.' '#'* suffix
+decimalR[int d]
+    : {d == 10}? (
+          uintegerR[10] suffix
+        | '.' digitR[10]+ '#'* suffix
+        | digitR[10]+ '.' digitR[10] '#'* suffix
+        | digitR[10]+ '#'+ '.' '#'* suffix
+    )
 ;
 
-uinteger2
-    : digit2+ '#'*
+uintegerR[int d]
+    : digitR[d]+ '#'*
 ;
 
-prefix2
-    : radix2 exactness
-    | exactness radix2
-;
-
-num8
-    : prefix8 complex8
-;
-
-complex8
-    : real8
-    | real8 '@' real8
-    | real8 '+' ureal8 'i'
-    | real8 '-' ureal8 'i'
-    | real8 '+ 'i'
-    | real8 '-' 'i'
-    | '+' ureal8 'i'
-    | '-' ureal8 'i'
-    | '+' 'i'
-    | '-' 'i'
-;
-
-real8
-    : sign ureal8
-;
-
-ureal8
-    : uinteger8
-    | uinteger8 '/' uinteger8
-    | decimal10
-;
-
-uinteger8
-    : digit8+ '#'*
-;
-
-prefix8
-    : radix8 exactness
-    | exactness radix8
-;
-
-num10
-    : prefix10 complex10
-;
-
-complex10
-    : real10
-    | real10 '@' real10
-    | real10 '+' ureal10 'i'
-    | real10 '-' ureal10 'i'
-    | real10 '+ 'i'
-    | real10 '-' 'i'
-    | '+' ureal10 'i'
-    | '-' ureal10 'i'
-    | '+' 'i'
-    | '-' 'i'
-;
-
-real10
-    : sign ureal10
-;
-
-ureal10
-    : uinteger10
-    | uinteger10 '/' uinteger10
-    | decimal10
-;
-
-uinteger10
-    : digit10+ '#'*
-;
-
-prefix10
-    : radix10 exactness
-    | exactness radix10
-;
-
-num16
-    : prefix16 complex16
-;
-
-complex16
-    : real16
-    | real16 '@' real16
-    | real16 '+' ureal16 'i'
-    | real16 '-' ureal16 'i'
-    | real16 '+ 'i'
-    | real16 '-' 'i'
-    | '+' ureal16 'i'
-    | '-' ureal16 'i'
-    | '+' 'i'
-    | '-' 'i'
-;
-
-real16
-    : sign ureal16
-;
-
-ureal16
-    : uinteger16
-    | uinteger16 '/' uinteger16
-    | decimal16
-;
-
-uinteger16
-    : digit16+ '#'*
-;
-
-prefix16
-    : radix16 exactness
-    | exactness radix16
+prefixR[int d]
+    : radixR[d] exactness
+    | exactness radixR[d]
 ;
 
 suffix
     :
-    | exponentMarker sign digit10+
+    | exponentMarker sign digitR[10]+
 ;
 
 exponentMarker
@@ -337,48 +231,329 @@ exactness
     | '#e'
 ;
 
-radix2
-    : '#b'
+radixR[int d]
+    : {d == 2}? '#b'
+    | {d == 8}? '#o'
+    | {d == 10}? (| '#d')
+    | {d == 16}? '#x'
 ;
 
-radix8
-    : '#o'
-;
-
-radix10
-    :
-    | '#d'
-;
-
-radix16
-    : '#x'
-;
-
-digit2
-    : '0'
-    | '1'
-;
-
-digit8
-    : ('0'..'7')
-;
-
-digit10
-    : digit
-;
-
-digit16
-    : digit10
-    | ('a'..'f')
+digitR[int d]
+    : {d == 2}? ('0' | '1')
+    | {d == 8}? ('0' | '1' | '2' | '3' | '4' | '5' | '6' | '7')
+    | {d == 10}? Digit
+    | {d == 16}? (Digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f')
 ;
 
 /* External representations */
 
+datum
+    : simpleDatum
+    | '(' datum* ')'
+    | '(' datum+ '.' datum ')'
+    | abbrevPrefix
+    | vector
+;
+
+simpleDatum
+    : boolean
+    | number
+    | character
+    | string
+    | symbol
+;
+
+symbol
+    : identifier
+;
+
+abbrevPrefix
+    : '\''
+    | '`'
+    | ','
+    | ',@'
+;
+
+vector
+    : '#(' datum* ')'
+;
+
 /* Expressions */
+
+expression
+    : variable
+    | literal
+    | procedureCall
+    | lambdaExpression
+    | conditional
+    | assignment
+    | derivedExpression
+    | macroUse
+    | macroBlock
+;
+
+literal
+    : quotation
+    | selfEvaluating
+;
+
+selfEvaluating
+    : boolean
+    | number
+    | character
+    | string
+;
+
+quotation
+    : '\'' datum
+    | '(' 'quote' datum ')'
+;
+
+procedureCall
+    : '(' operator operand* ')'
+;
+
+operator
+    : expression
+;
+
+operand
+    : expression
+;
+
+lambdaExpression
+    : '(' 'lambda' formals body ')'
+;
+
+formals
+    : '(' variable* ')'
+    | variable
+    | '(' variable+ '.' variable ')'
+;
+
+body
+    : definition* sequence
+;
+
+sequence
+    : command* expression
+;
+
+command
+    : expression
+;
+
+conditional
+    : '(' 'if' test consequent alternate ')'
+;
+
+test
+    : expression
+;
+
+consequent
+    : expression
+;
+
+alternate
+    : expression
+    |
+;
+
+assignment
+    : '(' 'set!' variable expression ')'
+;
+
+derivedExpression
+    : '(' 'cond' condClause+ ')'
+    | '(' 'cond' condClause* '(else' sequence ')' ')'
+    | '(' 'case' expression caseClause+ ')'
+    | '(' 'case' expression caseClause* '(else' sequence ')' ')'
+    | '(' 'and' test* ')'
+    | '(' 'or' test* ')'
+    | '(' 'let' '(' bindingSpec* ')' body ')'
+    | '(' 'let' variable '(' bindingSpec* ')' body ')'
+    | '(' 'let'* '(' bindingSpec* ')' body ')'
+    | '(' 'letrec' '(' bindingSpec* ')' body ')'
+    | '(' 'begin' sequence ')'
+    | '(' 'do' '(' iterationSpec* ')' '(' test doResult ')' command* ')'
+    | '(' 'delay' expression ')'
+    | quasiquotation
+;
+
+condClause
+    : '(' test sequence ')'
+    | '(' test ')'
+    | '(' test '=>' recipient ')'
+;
+
+recipient
+    : expression
+;
+
+caseClause
+    : '(' '(' datum* ')' sequence ')'
+;
+
+bindingSpec
+    : '(' variable expression ')'
+;
+
+iterationSpec
+    : '(' variable init step ')'
+    | '(' variable init ')'
+;
+
+init
+    : expression
+;
+
+step
+    : expression
+;
+
+doResult
+    : sequence
+    |
+;
+
+macroUse
+    : '(' keyword datum* ')'
+;
+
+keyword
+    : identifier
+;
+
+macroBlock
+    : '(' 'let-syntax' '(' syntaxSpec* ')' body ')'
+    | '(' 'letrec-syntax' '(' syntaxSpec* ')' body ')'
+;
+
+syntaxSpec
+    : '(' keyword transformerSpec ')'
+;
 
 /* Quasiquotations */
 
+quasiquotation
+    : quasiquotationD[1]
+;
+
+quasiquotationD[int d]
+    : '`' qqTemplateD[d]
+;
+
+qqTemplateD[int d]
+    : {d == 0}? expression
+    | simpleDatum
+    | listQQTemplateD[d]
+    | vectorQQTemplateD[d]
+    | unquotationD[d]
+;
+
+listQQTemplateD[int d]
+    : '(' qqTemplateOrSpliceD[d]* ')'
+    | '(' qqTemplateOrSpliceD[d]+ '.' qqTemplateD[d] ')'
+    | '\'' qqTemplateD[d]
+    | quasiquotationD[d + 1]
+;
+
+vectorQQTemplateD[int d]
+    : '#(' qqTemplateOrSpliceD[d]* ')'
+;
+
+unquotationD[int d]
+    : ',' qqTemplateD[d - 1]
+    | '(' 'unquote' qqTemplateD[d - 1]
+;
+
+qqTemplateOrSpliceD[int d]
+    : qqTemplateD[d]
+    | splicingUnquotationD[d]
+;
+
+splicingUnquotationD[int d]
+    : ',@' qqTemplateD[d - 1]
+    | '(' 'unquote-splicing' qqTemplateD[d - 1] ')'
+;
+
 /* Transformers */
+
+transformerSpec
+    : '(' 'syntax-rules' '(' identifier* ')' syntaxRule* ')'
+;
+
+syntaxRule
+    : '(' pattern template ')'
+;
+
+pattern
+    : patternIdentifier
+    | '(' pattern* ')'
+    | '(' pattern+ '.' pattern ')'
+    | '(' pattern* pattern ellipsis ')'
+    | '#(' pattern* ')'
+    | '#(' pattern* pattern ellipsis ')'
+    | patternDatum
+;
+
+patternDatum
+    : string
+    | character
+    | boolean
+    | number
+;
+
+template
+    : patternIdentifier
+    | '(' templateElement* ')'
+    | '(' templateElement+ '.' template ')'
+    | '#(' templateElement* ')'
+    | templateDatum
+;
+
+templateElement
+    : template
+    | template ellipsis
+;
+
+templateDatum
+    : patternDatum
+;
+
+patternIdentifier
+    : identifier
+;
+
+ellipsis
+    : '...'
+;
 
 /* Programs and definitions */
 
+program
+    : commandOrDefinition*
+;
+
+commandOrDefinition
+    : command
+    | definition
+    | syntaxDefinition
+    | '(' 'begin' commandOrDefinition+ ')'
+;
+
+definition
+    : '(' 'define' variable expression ')'
+    | '(' 'define' '(' variable defFormals ')' body ')'
+    | '(' 'begin' definition* ')'
+;
+
+defFormals
+    : variable*
+    | variable* '.' variable
+;
+
+syntaxDefinition
+    : '(' 'define-syntax' keyword transformerSpec ')'
+;
