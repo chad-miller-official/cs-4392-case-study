@@ -32,7 +32,7 @@ whitespace
 ;
 
 comment
-    : ';' .*?
+    : ';' (~('\n'))*
 ;
 
 atmosphere
@@ -194,7 +194,7 @@ decimalR[int d]
         | '.' digitR[10]+ '#'* suffix
         | digitR[10]+ '.' digitR[10] '#'* suffix
         | digitR[10]+ '#'+ '.' '#'* suffix
-    )
+      )
 ;
 
 uintegerR[int d]
@@ -247,12 +247,10 @@ digitR[int d]
 
 /* External representations */
 
+/* LEFT RECURSION */
 datum
     : simpleDatum
-    | '(' datum* ')'
-    | '(' datum+ '.' datum ')'
-    | abbrevPrefix
-    | vector
+    | compoundDatum
 ;
 
 simpleDatum
@@ -265,6 +263,24 @@ simpleDatum
 
 symbol
     : identifier
+;
+
+/* LEFT RECURSION */
+compoundDatum
+    : listScheme
+    | vector
+;
+
+/* LEFT RECURSION */
+listScheme
+    : '(' datum* ')'
+    | '(' datum+ '.' datum ')'
+    | abbreviation
+;
+
+/* LEFT RECURSION */
+abbreviation
+    : abbrevPrefix datum
 ;
 
 abbrevPrefix
@@ -366,14 +382,14 @@ assignment
 
 derivedExpression
     : '(' 'cond' condClause+ ')'
-    | '(' 'cond' condClause* '(else' sequence ')' ')'
+    | '(' 'cond' condClause* '(' 'else' sequence ')' ')'
     | '(' 'case' expression caseClause+ ')'
-    | '(' 'case' expression caseClause* '(else' sequence ')' ')'
+    | '(' 'case' expression caseClause* '(' 'else' sequence ')' ')'
     | '(' 'and' test* ')'
     | '(' 'or' test* ')'
     | '(' 'let' '(' bindingSpec* ')' body ')'
     | '(' 'let' variable '(' bindingSpec* ')' body ')'
-    | '(' 'let'* '(' bindingSpec* ')' body ')'
+    | '(' 'let*' '(' bindingSpec* ')' body ')'
     | '(' 'letrec' '(' bindingSpec* ')' body ')'
     | '(' 'begin' sequence ')'
     | '(' 'do' '(' iterationSpec* ')' '(' test doResult ')' command* ')'
@@ -442,14 +458,17 @@ quasiquotation
 
 quasiquotationD[int d]
     : '`' qqTemplateD[d]
+    | '(' 'quasiquote' qqTemplateD[d] ')'
 ;
 
 qqTemplateD[int d]
     : {d == 0}? expression
-    | simpleDatum
-    | listQQTemplateD[d]
-    | vectorQQTemplateD[d]
-    | unquotationD[d]
+    | {d > 0}? (
+          simpleDatum
+        | listQQTemplateD[d]
+        | vectorQQTemplateD[d]
+        | unquotationD[d]
+      )
 ;
 
 listQQTemplateD[int d]
@@ -465,7 +484,7 @@ vectorQQTemplateD[int d]
 
 unquotationD[int d]
     : ',' qqTemplateD[d - 1]
-    | '(' 'unquote' qqTemplateD[d - 1]
+    | '(' 'unquote' qqTemplateD[d - 1] ')'
 ;
 
 qqTemplateOrSpliceD[int d]
