@@ -11,7 +11,7 @@ def main(argv):
     lexer       = SchemeLexer(scheme_file)
     stream      = CommonTokenStream(lexer)
     parser      = SchemeParser(stream)
-    tree        = parser.StartRule()
+    tree        = parser.program()
 
 if __name__ == '__main__':
     main(sys.argv[1:])

@@ -162,34 +162,34 @@ number
 ;
 
 numR[int d]
-    : prefixR[d] complexR[d]
+    : prefixR[$d] complexR[$d]
 ;
 
 complexR[int d]
-    : realR[d]
-    | realR[d] '@' realR[d]
-    | realR[d] '+' urealR[d] 'i'
-    | realR[d] '-' urealR[d] 'i'
-    | realR[d] '+' 'i'
-    | realR[d] '-' 'i'
-    | '+' urealR[d] 'i'
-    | '-' urealR[d] 'i'
+    : realR[$d]
+    | realR[$d] '@' realR[$d]
+    | realR[$d] '+' urealR[$d] 'i'
+    | realR[$d] '-' urealR[$d] 'i'
+    | realR[$d] '+' 'i'
+    | realR[$d] '-' 'i'
+    | '+' urealR[$d] 'i'
+    | '-' urealR[$d] 'i'
     | '+' 'i'
     | '-' 'i'
 ;
 
 realR[int d]
-    : sign urealR[d]
+    : sign urealR[$d]
 ;
 
 urealR[int d]
-    : uintegerR[d]
-    | uintegerR[d] '/' uintegerR[d]
-    | decimalR[d]
+    : uintegerR[$d]
+    | uintegerR[$d] '/' uintegerR[$d]
+    | decimalR[$d]
 ;
 
 decimalR[int d]
-    : {d == 10}? (
+    : {$d == 10}? (
           uintegerR[10] suffix
         | '.' digitR[10]+ '#'* suffix
         | digitR[10]+ '.' digitR[10] '#'* suffix
@@ -198,12 +198,12 @@ decimalR[int d]
 ;
 
 uintegerR[int d]
-    : digitR[d]+ '#'*
+    : digitR[$d]+ '#'*
 ;
 
 prefixR[int d]
-    : radixR[d] exactness
-    | exactness radixR[d]
+    : radixR[$d] exactness
+    | exactness radixR[$d]
 ;
 
 suffix
@@ -232,17 +232,17 @@ exactness
 ;
 
 radixR[int d]
-    : {d == 2}? '#b'
-    | {d == 8}? '#o'
-    | {d == 10}? (| '#d')
-    | {d == 16}? '#x'
+    : {$d == 2}? '#b'
+    | {$d == 8}? '#o'
+    | {$d == 10}? (| '#d')
+    | {$d == 16}? '#x'
 ;
 
 digitR[int d]
-    : {d == 2}? ('0' | '1')
-    | {d == 8}? ('0' | '1' | '2' | '3' | '4' | '5' | '6' | '7')
-    | {d == 10}? Digit
-    | {d == 16}? (Digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f')
+    : {$d == 2}? ('0' | '1')
+    | {$d == 8}? ('0' | '1' | '2' | '3' | '4' | '5' | '6' | '7')
+    | {$d == 10}? Digit
+    | {$d == 16}? (Digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f')
 ;
 
 /* External representations */
@@ -457,44 +457,44 @@ quasiquotation
 ;
 
 quasiquotationD[int d]
-    : '`' qqTemplateD[d]
-    | '(' 'quasiquote' qqTemplateD[d] ')'
+    : '`' qqTemplateD[$d]
+    | '(' 'quasiquote' qqTemplateD[$d] ')'
 ;
 
 qqTemplateD[int d]
-    : {d == 0}? expression
-    | {d > 0}? (
+    : {$d == 0}? expression
+    | {$d > 0}? (
           simpleDatum
-        | listQQTemplateD[d]
-        | vectorQQTemplateD[d]
-        | unquotationD[d]
+        | listQQTemplateD[$d]
+        | vectorQQTemplateD[$d]
+        | unquotationD[$d]
       )
 ;
 
 listQQTemplateD[int d]
-    : '(' qqTemplateOrSpliceD[d]* ')'
-    | '(' qqTemplateOrSpliceD[d]+ '.' qqTemplateD[d] ')'
-    | '\'' qqTemplateD[d]
-    | quasiquotationD[d + 1]
+    : '(' qqTemplateOrSpliceD[$d]* ')'
+    | '(' qqTemplateOrSpliceD[$d]+ '.' qqTemplateD[$d] ')'
+    | '\'' qqTemplateD[$d]
+    | quasiquotationD[$d + 1]
 ;
 
 vectorQQTemplateD[int d]
-    : '#(' qqTemplateOrSpliceD[d]* ')'
+    : '#(' qqTemplateOrSpliceD[$d]* ')'
 ;
 
 unquotationD[int d]
-    : ',' qqTemplateD[d - 1]
-    | '(' 'unquote' qqTemplateD[d - 1] ')'
+    : ',' qqTemplateD[$d - 1]
+    | '(' 'unquote' qqTemplateD[$d - 1] ')'
 ;
 
 qqTemplateOrSpliceD[int d]
-    : qqTemplateD[d]
-    | splicingUnquotationD[d]
+    : qqTemplateD[$d]
+    | splicingUnquotationD[$d]
 ;
 
 splicingUnquotationD[int d]
-    : ',@' qqTemplateD[d - 1]
-    | '(' 'unquote-splicing' qqTemplateD[d - 1] ')'
+    : ',@' qqTemplateD[$d - 1]
+    | '(' 'unquote-splicing' qqTemplateD[$d - 1] ')'
 ;
 
 /* Transformers */
