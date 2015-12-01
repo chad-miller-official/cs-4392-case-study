@@ -8,9 +8,12 @@
 (define (self-evaluating? expr)
   (cond ((number? expr) #t)
         ((string? expr) #t)
-        (else #f)))
+        ((boolean? expr) #t)
+        ((vector? expr) #t)
+        (else (char? expr))))
 
 ;;; One of two main entry points to metacircular evaluator. Evaluates
 ;;; expressions. todo: learn more about this
 (define (eval expr env)
-  (if (self-evaluating? expr) expr))
+  (cond ((self-evaluating? expr) expr)
+        (else "Eval failed/Not implemented")))
