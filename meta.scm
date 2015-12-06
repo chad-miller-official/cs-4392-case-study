@@ -34,18 +34,20 @@
 ;;; expressions. todo: learn more about this
 (define (meval expr env)
   (cond ((self-evaluating? expr) expr)
-        ((quote? expr) (display "Is quote\n"))
-        ((lambda? expr) (display "Is lambda\n"))
-        ((if? expr) (display "Is if\n"))
-        ((define? expr) (display "Is define\n"))
-        ((cond? expr) (display "Is cond\n"))
-        (else "eval failed/not implemented\n")))
+        ((quote? expr) (display "\n;Value: Is quote\n"))
+        ((lambda? expr) (display "\n;Value: Is lambda\n"))
+        ((if? expr) (display "\n;Value: Is if\n"))
+        ((define? expr) (display "\n;Value: Is define\n"))
+        ((cond? expr) (display "\n;Value: Is cond\n"))
+        (else (error "eval failed/not implemented\n"))))
 
 ;;; Driver for REPL, just calls recursive driver with initial environment.
 (define (driver)
   (recDriver user-initial-environment))
 
 (define (recDriver env)
+  (display "meta> ")
   (let ((expr (read)))
         (let ((newEnv (meval expr env)))
+	  (display "\n")
           (recDriver newEnv))))
