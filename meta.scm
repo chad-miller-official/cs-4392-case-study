@@ -82,21 +82,34 @@
   (environment-define (car envs) symbol (meval expr envs)))
 
 
+;;; Primitive procedure table, we will look up primitives to get the compiled procedures here
+(define primitive-table
+  (list (list 'car car)
+        (list 'cdr cdr)
+        ))
+
 ;;; Apply checks
 
 (define (primitive-procedure? proc)
   (cond ((eq? proc 'car) #t)
+        ((eq? proc 'cdr) #t)
 	(else #f)))
-	  
+
 
 ;;; Apply Code
 
+(define (retrieve-procedure proc table)
+  (if (null? (car table))
+    (error "Procedure not found"))
+  (display (car (car table)))
+  (if (eq? proc (car (car table)))
+    (car (cdr (car table)))
+    (retrieve-procedure proc (cdr table))))
+
 (define (apply-primitive-procedure proc args)
-  (display proc)
-  (newline)
-  (display args)
-  (newline)
-  (proc args))
+  (let ((procedure (retrieve-procedure proc primitive-table))
+        (evaluated-args (meval (car args) global-environment)))
+    (procedure evaluated-args)))
 
 ;;; Driver for REPL, just calls recursive driver with initial environment.
 (define (driver)
