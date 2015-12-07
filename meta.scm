@@ -20,8 +20,10 @@
 ;;; to a procedures.
 (define (mapply procedure arguments)
   (cond ((primitive-procedure? procedure)
+         (display "primitive")
 	 (apply-primitive-procedure procedure arguments))
 	((compound-procedure? procedure)
+     (display "compound")
 	 (apply-compount-procedure procedure arguments))
 	(else
 	  (error "wat"))))
@@ -86,6 +88,9 @@
 (define primitive-table
   (list (list 'car car)
         (list 'cdr cdr)
+        (list 'cons cons)
+        (list 'null? null?)
+        (list 'list list)
         ))
 
 ;;; Apply checks
@@ -93,23 +98,25 @@
 (define (primitive-procedure? proc)
   (cond ((eq? proc 'car) #t)
         ((eq? proc 'cdr) #t)
+        ((eq? proc 'cons) #t)
+        ((eq? proc 'null?) #t)
+        ((eq? proc 'list) #t)
 	(else #f)))
-
 
 ;;; Apply Code
 
 (define (retrieve-procedure proc table)
   (if (null? (car table))
     (error "Procedure not found"))
-  (display (car (car table)))
   (if (eq? proc (car (car table)))
     (car (cdr (car table)))
     (retrieve-procedure proc (cdr table))))
 
 (define (apply-primitive-procedure proc args)
-  (let ((procedure (retrieve-procedure proc primitive-table))
-        (evaluated-args (meval (car args) global-environment)))
-    (procedure evaluated-args)))
+  (display args)
+  (let ((procedure (retrieve-procedure proc primitive-table)))
+        ;;;(evaluated-args (meval (car args) global-environment)))
+    (cons procedure args)))
 
 ;;; Driver for REPL, just calls recursive driver with initial environment.
 (define (driver)
