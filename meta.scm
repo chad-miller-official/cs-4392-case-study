@@ -1,24 +1,99 @@
 ;;; Environment definition
 ;;; Relies on environment functions implemented in mit-scheme
+;;; //////////////////////////
+;;; Environment functions
+;;; //////////////////////////
 
-(define global-environment (list user-initial-environment))
+(define empty-environment '())
+
+(define (make-frame vars vals)
+  (cons vars vals))
+
+(define (add-binding-to-frame! var val frame)
+  (set-car! frame (cons var (car frame)))
+  (set-cdr! frame (cons val (cdr frame))))
+
+(define (extend-environment vars vals base-env)
+  (if (= (length vars) (length vals))
+    (cons (make-frame vars vals) base-env)
+    (if (< (length vars) (length vals))
+      (error "Too many arguments supplied" vars vals)
+      (error "Too few arguments supplied" vars vals))))
+
+(define (set-var-val! var val env)
+  (define (env-loop env)
+    (define (scan vars vals)
+      (cond ((null? vars)
+	     (env-loop (cdr env)))
+	    ((eq? var (car vars))
+	     (set-car! vals val))
+	    (else (scan (cdr vars) (cdr vals)))))
+    (if (eq? env empty-environment)
+      (error "Unbound variable" var)
+      (let ((frame (car env)))
+	(scan (car frame)
+	      (cdr frame)))))
+  (env-loop env))
+
+
+(define (define-var! var val env)
+  (let ((frame (car env)))
+    (define (scan vars vals)
+      (cond ((null? vars)
+	     (add-binding-to-frame! var val frame))
+	    ((eq? var (car vars))
+	     (set-car! vals val))
+	    (else (scan (cdr vars) (cdr vals)))))
+    (scan (car frame)
+	  (cdr frame))
+    var))
+
+(define (lookup-var var env)
+  (define (env-loop env)
+    (define (scan vars vals)
+      (cond ((null? vars)
+	     (env-loop (enclosing-environment env)))
+	    ((eq? var (car vars))
+	     (car vals))
+	    (else (scan (cdr vars) (cdr vals)))))
+    (if (eq? env empty-environment)
+      (error "Unbound variable" var)
+      (let ((frame (car env)))
+	(scan (car frame)
+	      (cdr frame)))))
+  (env-loop env))
+
+(define (setup-environment)
+  (let ((initial-env
+	  (extend-environment (list 'dummy)
+			      (list 5)
+			      '())))
+    initial-env))
+
+(define global-environment (setup-environment))
+
 
 ;;; One of two main entry points to metacircular evaluator. Evaluates
 ;;; expressions. 
-(define (meval expr envs)
+(define (meval expr env)
   (cond ((self-evaluating? expr) expr)
-	((variable? expr) (lookup-var envs expr))
+        ((variable? expr) (meval-lookup-var expr env))
         ((quote? expr) (cadr expr))
-        ((lambda? expr) (meval-lambda expr envs))
-        ((if? expr) (meval-if (cdr expr) envs))
-        ((define? expr) (meval-define 
-			  (car (cdr expr)) 
-			  (car (cdr (cdr expr))) 
-			  envs))
-        ((cond? expr) (display "\n;Value: Is cond\n"))
-	((apply? expr) (mapply 
+	((assignment? expr) (meval-assignment expr env))
+	((define? expr) (meval-define 
+			  (definition-variable expr)
+			  (definition-value expr)
+			  env))
+        ((if? expr) (meval-if (cdr expr) env))
+        ((lambda? expr) (meval-lambda 
+			  (lambda-params expr)
+			  (lambda-body expr)
+			  env))
+        ((begin? expr) (meval-sequence (cdr expr) env))
+        ((cond? expr) (meval-cond expr env))
+        ((apply? expr) (mapply 
 			 (car expr)
-			 (list-of-eval-args (cdr expr) envs)))
+			 (list-of-eval-args (cdr expr) env)))
         (else (error "eval failed/not implemented\n"))))
 
 
@@ -28,10 +103,9 @@
   (cond ((primitive-procedure? procedure)
 	 (apply-primitive-procedure procedure arguments))
 	((compound-procedure? procedure)
-	 (display "compound")
 	 (apply-compound-procedure procedure arguments))
 	(else
-	  (error "wat"))))
+	  (error "Invalid procedure"))))
 
 ;;; //////////////////////////
 ;;; Eval's condition checks
@@ -53,14 +127,20 @@
 (define (quote? expr)
   (starts-with-symbol? expr 'quote))
 
-(define (lambda? expr)
-  (starts-with-symbol? expr 'lambda))
+(define (assignment? expr)
+  (starts-with-symbol? expr 'set!))
+
+(define (define? expr)
+  (starts-with-symbol? expr 'define))
 
 (define (if? expr)
   (starts-with-symbol? expr 'if))
 
-(define (define? expr)
-  (starts-with-symbol? expr 'define))
+(define (lambda? expr)
+  (starts-with-symbol? expr 'lambda))
+
+(define (begin? expr)
+  (starts-with-symbol? expr 'begin))
 
 (define (cond? expr)
   (starts-with-symbol? expr 'cond))
@@ -84,39 +164,89 @@
 
 ;;; Given an environment, looks up a symbol. If the variable does
 ;;; not exist, it throws an error.
-(define (lookup-var envs symbol)
-  (define (lookup-recurse envs)
-    (if (null? envs)
-      (begin 
-	(display symbol)
-        (display ": ")
-        (error "Symbol does not exist"))
-      (let ((result (environment-bound? (car envs) symbol)))
-	(if (eq? result #f)
-	  (lookup-recurse (cdr envs))
-	  (environment-lookup (car envs) symbol)))))
-  (lookup-recurse envs))
+(define (meval-lookup-var symbol env)
+  (lookup-var symbol env))
+
+(define (meval-assignment expr env)
+  (set-var-val! (cadr expr) (meval (caddr expr) env) env))
+
+(define (meval-define symbol expr env)
+   (define-var! symbol (meval expr env) env))
+
+;;; (define x 5)
+;;; (define (square x) (* x x))
+(define (definition-variable expr)
+  (if (symbol? (cadr expr))
+    (cadr expr)
+    (caadr expr)))
+
+(define (definition-value expr)
+  (if (symbol? (cadr expr))
+    (caddr expr)
+    (make-lambda (cdr (car (cdr expr)))
+		 (cdr (cdr expr)))))
 
 ;;; Given an if statement and an environment, evaluates the if statement.
-(define (meval-if expr envs)
+(define (meval-if expr env)
   (let ((condition (car expr))
 	(then-stmt (cadr expr))
 	(else-stmt (caddr expr)))
-    (if (meval condition envs)
-      (meval then-stmt envs)
-      (if (null? else-stmt) (meval else-stmt envs)))))
+    (if (true? (meval condition env))
+      (meval then-stmt env)
+      (if (null? else-stmt) (meval else-stmt env)))))
 
-;;; Given a define statement and an environment,
-;;; inserts variable definition into
-(define (meval-define symbol expr envs)
-  (environment-define (car envs) symbol (meval expr envs)))
+(define (make-if condition then-stmt else-stmt)
+  (list 'if condition then-stmt else-stmt))
+
+(define (meval-lambda params body env)
+  (make-procedure params body env))
+
+(define (make-lambda param body)
+  (cons 'lambda (cons param body)))
+
+(define (lambda-params expr)
+  (cadr expr))
+
+(define (lambda-body expr)
+  (cddr expr))
+
+(define (meval-sequence exprs env)
+  (cond ((null? (cdr exprs)) (meval (car exprs) env))
+	(else (meval (car exprs) env)
+	      (meval-sequence (cdr exprs) env))))
+
+(define (sequence->expr seq)
+  (cond ((null? seq) seq)
+	((null? (cdr seq)) (car seq))
+	(else (make-begin seq))))
+
+(define (make-begin seq) (cons 'begin seq))
+
+(define (meval-cond expr env)
+  (meval (cond->if expr) env))
+
+(define (cond->if expr)
+  (expand-clauses (cdr expr)))
+
+(define (expand-clauses clauses)
+  (if (null? clauses)
+    #f
+    (let ((first (car clauses))
+	  (rest (cdr clauses)))
+      (if (eq? (car first) 'else)
+	(if (null? rest)
+	  (sequence->exp (cdr first))
+	  (error "else clause should come last, but doesn't"))
+	(make-if (car first)
+		 (sequence->exp (cdr first))
+		 (expand-clauses rest))))))
 
 ;;; Given the arguments of a function, evaluates them to their most basic
 ;;; level and puts them in a list.
-(define (list-of-eval-args exprs envs)
+(define (list-of-eval-args exprs env)
   (if (null? exprs)
     '()
-    (cons (meval (car exprs) envs) (list-of-eval-args (cdr exprs) envs))))
+    (cons (meval (car exprs) env) (list-of-eval-args (cdr exprs) env))))
 
 ;;; //////////////////////////
 ;;; Apply checks
@@ -135,6 +265,16 @@
 	((eq? proc 'eq?) #t)
 	((eq? proc '=) #t)
 	(else #f)))
+
+;(define (retrieve-procedure proc env)
+;  (if (null? env)
+;    (error "Procedure not found"))
+;  (if (eq
+
+(define (compound-procedure? proc)
+  (let ((result (lookup-var proc global-environment)))
+    (starts-with-symbol? result 'procedure)))
+
 
 ;;; //////////////////////////
 ;;; Apply Code
@@ -170,6 +310,22 @@
     '()
     (cons (car args) (make-list (cdr args)))))
 
+(define (apply-compound-procedure proc arguments)
+  (let ((procedure (lookup-var proc global-environment)))
+    (let ((result 
+	    (meval-sequence 
+	      (caddr procedure)
+	      (extend-environment 
+		(cadr procedure)
+		arguments
+		(cadddr procedure)))))
+      result)))
+
+
+;;; Creating a procedure to be run
+(define (make-procedure params body env)
+  (list 'procedure params body env))
+
 ;;; //////////////////////////
 ;;; Interpreter Loop
 ;;; //////////////////////////
@@ -178,12 +334,12 @@
 (define (driver)
   (recDriver global-environment))
 
-(define (recDriver envs)
+(define (recDriver env)
   (display "meta> ")
   (let ((in (read)))
-        (let ((out (meval in envs)))
+        (let ((out (meval in env)))
 	  (display "\n")
 	  (display ";Value: ")
 	  (display out)
 	  (display "\n\n")
-          (recDriver envs))))
+          (recDriver env))))
