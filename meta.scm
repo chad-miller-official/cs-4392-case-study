@@ -1,5 +1,3 @@
-;;; Environment definition
-;;; Relies on environment functions implemented in mit-scheme
 ;;; //////////////////////////
 ;;; Environment functions
 ;;; //////////////////////////
@@ -52,7 +50,7 @@
   (define (env-loop env)
     (define (scan vars vals)
       (cond ((null? vars)
-	     (env-loop (enclosing-environment env)))
+	     (env-loop (cdr env)))
 	    ((eq? var (car vars))
 	     (car vals))
 	    (else (scan (cdr vars) (cdr vals)))))
@@ -272,6 +270,7 @@
 ;  (if (eq
 
 (define (compound-procedure? proc)
+  (
   (let ((result (lookup-var proc global-environment)))
     (starts-with-symbol? result 'procedure)))
 
@@ -318,13 +317,13 @@
 	      (extend-environment 
 		(cadr procedure)
 		arguments
-		(cadddr procedure)))))
+		(car global-environment)))))
       result)))
 
 
 ;;; Creating a procedure to be run
 (define (make-procedure params body env)
-  (list 'procedure params body env))
+  (list 'procedure params body))
 
 ;;; //////////////////////////
 ;;; Interpreter Loop
