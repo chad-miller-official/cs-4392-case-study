@@ -270,7 +270,6 @@
 ;  (if (eq
 
 (define (compound-procedure? proc)
-  (
   (let ((result (lookup-var proc global-environment)))
     (starts-with-symbol? result 'procedure)))
 
